@@ -1,0 +1,18 @@
+---
+description: Bump version and rebuild VSIX when changing the extension
+globs: package.json, src/**/*.ts, out/**/*
+alwaysApply: true
+---
+
+# Version and VSIX for App Live Debug
+
+When you change the **App Live Debug** extension (code, config, or manifest):
+
+1. **Bump the version** in `package.json` (`"version": "x.y.z"`). Use semantic versioning:
+   - Patch (e.g. 0.5.1 → 0.5.2): bugfixes, small tweaks, docs.
+   - Minor (e.g. 0.5.2 → 0.6.0): new features, new settings.
+   - Major (e.g. 0.6.0 → 1.0.0): breaking changes.
+
+2. **Recompile and package**: run `npm run vsix` at the end of your changes so the new `.vsix` is generated.
+
+**Exception**: Do **not** bump version or run `npm run vsix` if the user explicitly asks you not to (e.g. "sans mettre à jour la version", "don't bump version", "no vsix").

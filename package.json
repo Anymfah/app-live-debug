@@ -1,8 +1,9 @@
 {
   "name": "app-live-debug",
   "displayName": "App Live Debug",
+  "publisher": "anymfah",
   "description": "Bridge between Helios app and Cursor for live debugging: receive prompts via local API, copy to clipboard, and work with .cursor/tickets.json",
-  "version": "0.2.0",
+  "version": "0.5.2",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -10,7 +11,7 @@
     "Other"
   ],
   "activationEvents": [
-    "onStartupFinished"
+    "*"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -46,6 +47,31 @@
           "type": "string",
           "default": "auto",
           "description": "Model for the headless agent (e.g. \"auto\", \"gpt-5.2\", \"sonnet-4.5-thinking\"). Use \"auto\" for automatic model selection. Run `agent models` to list options."
+        },
+        "appLiveDebug.cursorApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Cursor API key for headless agent. When set, overrides CURSOR_API_KEY env var. Get a key in Cursor Settings → Cursor CLI. Leave empty to use the environment variable."
+        },
+        "appLiveDebug.agentPath": {
+          "type": "string",
+          "default": "",
+          "description": "Full path to the Cursor CLI 'agent' executable. Use this if 'agent' is not in PATH when the extension runs (e.g. on Windows). In a terminal run 'where agent' (Windows) or 'which agent' (Mac/Linux) to get the path. Leave empty to use 'agent' from PATH."
+        },
+        "appLiveDebug.agentWorkspaceTrust": {
+          "type": "string",
+          "default": "Trust workspace (recommended)",
+          "enum": [
+            "Trust workspace (recommended)",
+            "Trust without confirmation (yolo)",
+            "Ask each time (may block when run from extension)"
+          ],
+          "enumDescriptions": [
+            "Trust the workspace and run without prompting. Passes --trust to the agent. Use this when running from Helios or from the extension.",
+            "Trust without any confirmation. Passes --yolo to the agent.",
+            "Do not pass a trust flag; the agent may show \"Workspace Trust Required\" and block in headless mode."
+          ],
+          "description": "How the Cursor CLI agent should handle workspace trust. Required for non-interactive runs; choose \"Trust workspace\" to avoid the \"Workspace Trust Required\" prompt."
         }
       }
     }
@@ -53,7 +79,8 @@
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./"
+    "watch": "tsc -watch -p ./",
+    "vsix": "npm run compile && npx --yes @vscode/vsce package"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",

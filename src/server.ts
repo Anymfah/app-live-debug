@@ -11,6 +11,8 @@ export interface PromptPayload {
   text?: string;
   description?: string;
   context?: Record<string, unknown>;
+  /** When set, pass --resume <contextId> to the agent so this message continues that chat (enables multiple chat windows). */
+  contextId?: string;
 }
 
 export interface SessionChunk {

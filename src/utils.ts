@@ -80,6 +80,8 @@ export interface PromptPayload {
   text?: string;
   description?: string;
   context?: Record<string, unknown>;
+  /** When set, the agent is told to resume that chat (--resume contextId). Enables multiple chat windows. */
+  contextId?: string;
 }
 
 /**
@@ -152,15 +154,16 @@ export async function copyToClipboardAndNotify(text: string): Promise<void> {
   }
 }
 
-function getOutputChannel(): vscode.OutputChannel {
+export function getOutputChannel(): vscode.OutputChannel {
   return vscode.window.createOutputChannel(OUTPUT_CHANNEL_NAME);
 }
 
 /**
  * Handle incoming prompt: either run Cursor CLI agent headless or copy to clipboard + open Composer.
  * When sessionId is provided (streaming mode), agent stdout/stderr and end/error are pushed to the session for SSE.
+ * When contextId is provided (e.g. from payload.contextId), the agent resumes that chat (--resume contextId) for multiple chat windows.
  */
-export async function handleIncomingPrompt(text: string, sessionId?: string): Promise<void> {
+export async function handleIncomingPrompt(text: string, sessionId?: string, contextId?: string): Promise<void> {
   const config = vscode.workspace.getConfiguration("appLiveDebug");
   const useHeadless = config.get<boolean>("useHeadlessAgent") ?? true;
   const allowFileChanges = config.get<boolean>("agentAllowFileChanges") ?? true;
@@ -181,6 +184,9 @@ export async function handleIncomingPrompt(text: string, sessionId?: string): Pr
       return;
     }
     const model = config.get<string>("agentModel") ?? "auto";
+    const cursorApiKey = config.get<string>("cursorApiKey") ?? "";
+    const agentPath = config.get<string>("agentPath") ?? "";
+    const workspaceTrust = config.get<string>("agentWorkspaceTrust") ?? "Trust workspace (recommended)";
     if (!session) {
       vscode.window.showInformationMessage("App Live Debug: Agent headless en cours d'exécution…");
     }
@@ -189,6 +195,10 @@ export async function handleIncomingPrompt(text: string, sessionId?: string): Pr
       cwd,
       allowFileChanges,
       model: model || undefined,
+      cursorApiKey: cursorApiKey.trim() || undefined,
+      agentPath: agentPath.trim() || undefined,
+      workspaceTrust,
+      contextId: contextId?.trim() || undefined,
       onOutput: session
         ? (data: string, stream: "stdout" | "stderr") => session.push(stream, data)
         : undefined,

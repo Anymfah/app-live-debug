@@ -1,14 +1,14 @@
 import * as vscode from "vscode";
 
 import { getSession, startPromptServer, stopPromptServer } from "./server";
-import { buildPromptFromPayload, buildPromptFromTicket, handleIncomingPrompt, readPendingPromptSource, readTickets } from "./utils";
+import { buildPromptFromPayload, buildPromptFromTicket, getOutputChannel, handleIncomingPrompt, readPendingPromptSource, readTickets } from "./utils";
 
 export function activate(context: vscode.ExtensionContext): void {
   const port = vscode.workspace.getConfiguration("appLiveDebug").get<number>("serverPort") ?? 8765;
   startPromptServer(port, async (payload, sessionId) => {
     const text = await buildPromptFromPayload(payload);
     if (text) {
-      await handleIncomingPrompt(text, sessionId);
+      await handleIncomingPrompt(text, sessionId, payload.contextId);
     } else if (sessionId) {
       const session = getSession(sessionId);
       if (session) {
@@ -17,6 +17,10 @@ export function activate(context: vscode.ExtensionContext): void {
         session.done = true;
       }
     }
+  }).then((actualPort) => {
+    const channel = getOutputChannel();
+    channel.appendLine(`Server listening on http://127.0.0.1:${actualPort} (POST /prompt, GET /prompt/stream?sessionId=...)`);
+    channel.show(true);
   }).catch((err) => {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[App Live Debug] Server failed to start:", msg);

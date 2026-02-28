@@ -6,3 +6,6 @@ tsconfig.json
 **/*.map
 **/*.ts
 node_modules/**
+.cursor/app-live-debug-*.txt
+.cursor/app-live-debug-*.ps1
+.cursor/test/**
