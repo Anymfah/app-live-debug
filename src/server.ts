@@ -19,26 +19,9 @@ function parseBody(req: http.IncomingMessage): Promise<string> {
   });
 }
 
-function formatPayloadToText(payload: PromptPayload): string {
-  if (payload.text && typeof payload.text === "string") {
-    return payload.text;
-  }
-  const parts: string[] = [];
-  if (payload.description && typeof payload.description === "string") {
-    parts.push(payload.description);
-  }
-  if (payload.context && typeof payload.context === "object") {
-    parts.push("\n## Context\n");
-    for (const [key, value] of Object.entries(payload.context)) {
-      parts.push(`- **${key}**: ${typeof value === "object" ? JSON.stringify(value) : String(value)}`);
-    }
-  }
-  return parts.join("\n").trim() || "";
-}
-
 export function startPromptServer(
   port: number = DEFAULT_PORT,
-  onPrompt: (text: string) => void
+  onPrompt: (payload: PromptPayload) => void
 ): Promise<number> {
   return new Promise((resolve, reject) => {
     if (server) {
@@ -68,13 +51,14 @@ export function startPromptServer(
 
       try {
         const body = await parseBody(req);
-        const payload = JSON.parse(body || "{}") as PromptPayload;
-        const text = formatPayloadToText(payload);
-        if (text) {
-          onPrompt(text);
+        const parsed = JSON.parse(body || "{}");
+        const payload: PromptPayload = Array.isArray(parsed) && parsed.length > 0 ? parsed[0] : parsed;
+        const hasContent = !!(payload?.text || payload?.description || (payload?.context && Object.keys(payload.context).length > 0));
+        if (hasContent) {
+          onPrompt(payload);
         }
         res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ ok: true, copied: !!text }));
+        res.end(JSON.stringify({ ok: true, received: hasContent }));
       } catch (e) {
         res.writeHead(400, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: (e as Error).message }));

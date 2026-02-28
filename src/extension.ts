@@ -1,12 +1,13 @@
 import * as vscode from "vscode";
 
 import { startPromptServer, stopPromptServer } from "./server";
-import { copyToClipboardAndNotify, formatTicketToText, readPendingPrompt, readTickets } from "./utils";
+import { buildPromptFromPayload, buildPromptFromTicket, handleIncomingPrompt, readPendingPromptSource, readTickets } from "./utils";
 
 export function activate(context: vscode.ExtensionContext): void {
   const port = vscode.workspace.getConfiguration("appLiveDebug").get<number>("serverPort") ?? 8765;
-  startPromptServer(port, (text) => {
-    void copyToClipboardAndNotify(text);
+  startPromptServer(port, async (payload) => {
+    const text = await buildPromptFromPayload(payload);
+    if (text) await handleIncomingPrompt(text);
   }).catch((err) => {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[App Live Debug] Server failed to start:", msg);
@@ -15,12 +16,13 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     vscode.commands.registerCommand("appLiveDebug.copyPendingPrompt", async () => {
-      const text = await readPendingPrompt();
-      if (text) {
-        copyToClipboardAndNotify(text);
-      } else {
+      const source = await readPendingPromptSource();
+      if (!source) {
         vscode.window.showWarningMessage("App Live Debug: No pending prompt or open ticket found.");
+        return;
       }
+      const text = source.type === "file" ? source.text : await buildPromptFromTicket(source.ticket);
+      if (text) await handleIncomingPrompt(text);
     })
   );
 
@@ -41,8 +43,8 @@ export function activate(context: vscode.ExtensionContext): void {
         matchOnDescription: true,
       });
       if (picked) {
-        const text = formatTicketToText(picked.ticket);
-        copyToClipboardAndNotify(text);
+        const text = await buildPromptFromTicket(picked.ticket);
+        if (text) await handleIncomingPrompt(text);
       }
     })
   );

@@ -1,0 +1,20 @@
+---
+description: App Live Debug extension and Helios integration
+globs: 
+alwaysApply: false
+---
+
+# App Live Debug & Helios
+
+When working on the **App Live Debug** extension or on **Helios ↔ Cursor** integration:
+
+1. **Read [README.md](../../README.md)** at the project root for:
+   - Installation (F5, VSIX), configuration (`appLiveDebug.serverPort`, `useHeadlessAgent`, `agentModel`, etc.)
+   - Local API: `POST /prompt` payload (`text`, or `description` + `context` with `url`, `domPath`, `consoleLogs`, `screenshotBase64`)
+   - Support for array payload (first ticket used) and screenshot: image written to `.cursor/app-live-debug-screenshot.png`, path added to prompt so the CLI agent can read it
+   - Commands: "Copy pending prompt", "Pick a ticket for Composer"
+   - Headless agent: Cursor CLI (`agent -p`), requires CLI installed and `CURSOR_API_KEY` set
+
+2. **From Helios (Angular)** the app only needs to send a `POST` to `http://localhost:<port>/prompt` with the JSON body (no API keys in the frontend). Use the port from the extension setting `appLiveDebug.serverPort` (default 8765).
+
+3. **Updating the extension**: Changes are in this repo; run `npm run compile`. In Cursor, reload the window (Ctrl+Shift+P → "Developer: Reload Window") or reinstall the VSIX in the instance where you use it (e.g. where you open the Helios project). Nothing to do from the Helios project itself to "update" the extension.

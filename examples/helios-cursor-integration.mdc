@@ -1,0 +1,60 @@
+---
+description: Send prompts from Helios to Cursor via App Live Debug extension
+globs:
+alwaysApply: false
+---
+
+# Helios → Cursor (App Live Debug)
+
+When working on the **Helios** app and integrating with Cursor for live debug:
+
+1. **App Live Debug extension** must be installed in Cursor and running (server on a configurable port, default 8765).
+
+2. **Sending a prompt from Helios**: send a `POST` request to the extension's local API. No API keys or secrets in the frontend — only the prompt payload to localhost.
+
+   - **URL**: `http://localhost:<port>/prompt`  
+     Use the port from Cursor settings: `appLiveDebug.serverPort` (default **8765**). If the user changed it (e.g. 8766), use that port.
+
+   - **Headers**: `Content-Type: application/json`
+
+   - **Body** (one of):
+     - Plain text: `{ "text": "Your prompt or bug description here." }`
+     - Structured (recommended for bugs/features):
+       ```json
+       {
+         "description": "Short description of the bug or feature",
+         "context": {
+           "url": "current page URL",
+           "domPath": "selector or path of the element",
+           "domSnippet": "optional HTML snippet",
+           "consoleLogs": ["array of console messages or errors"],
+           "screenshotBase64": "data:image/png;base64,... or raw base64"
+         }
+       }
+       ```
+     - You can also send an **array** of ticket objects; the extension uses the first element.
+
+3. **Screenshot**: If `context.screenshotBase64` is present, the extension writes the image to `.cursor/app-live-debug-screenshot.png` in the **Cursor workspace** (the project folder open in Cursor) and adds that path to the prompt so the Cursor CLI agent can read the image. Use a data URL (`data:image/png;base64,...`) or raw base64.
+
+4. **Cursor workspace**: The user must have the **correct project folder open in Cursor** (e.g. the Helios app repo or the repo the agent should modify). The headless agent runs in that folder.
+
+5. **Example (Angular HttpClient)**:
+   ```typescript
+   const port = 8765; // or read from env/config if you expose it
+   const url = `http://localhost:${port}/prompt`;
+   const body = {
+     description: this.ticketDescription,
+     context: {
+       url: this.currentUrl,
+       domPath: this.selectedElement?.domPath ?? '',
+       consoleLogs: this.consoleLogs,
+       screenshotBase64: this.screenshotDataUrl
+     }
+   };
+   this.http.post(url, body).subscribe({
+     next: () => this.snackBar.open('Envoyé à Cursor', 'OK'),
+     error: () => this.snackBar.open('Cursor / App Live Debug non joignable. Vérifiez le port.', 'OK')
+   });
+   ```
+
+Copy this file into your Helios project as `.cursor/rules/helios-cursor-integration.mdc` so Cursor uses it when working on Helios.

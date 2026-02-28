@@ -31,6 +31,21 @@
           "type": "number",
           "default": 8765,
           "description": "Port for the local HTTP server that receives prompts from Helios."
+        },
+        "appLiveDebug.useHeadlessAgent": {
+          "type": "boolean",
+          "default": true,
+          "description": "Run Cursor CLI agent in headless mode (agent -p) instead of opening Composer. Requires Cursor CLI installed and CURSOR_API_KEY set."
+        },
+        "appLiveDebug.agentAllowFileChanges": {
+          "type": "boolean",
+          "default": true,
+          "description": "When using headless agent, allow it to modify files (--force). If false, agent only suggests changes."
+        },
+        "appLiveDebug.agentModel": {
+          "type": "string",
+          "default": "auto",
+          "description": "Model for the headless agent (e.g. \"auto\", \"gpt-5.2\", \"sonnet-4.5-thinking\"). Use \"auto\" for automatic model selection. Run `agent models` to list options."
         }
       }
     }
