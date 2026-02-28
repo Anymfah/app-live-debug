@@ -1,13 +1,22 @@
 import * as vscode from "vscode";
 
-import { startPromptServer, stopPromptServer } from "./server";
+import { getSession, startPromptServer, stopPromptServer } from "./server";
 import { buildPromptFromPayload, buildPromptFromTicket, handleIncomingPrompt, readPendingPromptSource, readTickets } from "./utils";
 
 export function activate(context: vscode.ExtensionContext): void {
   const port = vscode.workspace.getConfiguration("appLiveDebug").get<number>("serverPort") ?? 8765;
-  startPromptServer(port, async (payload) => {
+  startPromptServer(port, async (payload, sessionId) => {
     const text = await buildPromptFromPayload(payload);
-    if (text) await handleIncomingPrompt(text);
+    if (text) {
+      await handleIncomingPrompt(text, sessionId);
+    } else if (sessionId) {
+      const session = getSession(sessionId);
+      if (session) {
+        session.push("error", "Empty prompt after building from payload.");
+        session.push("end", "");
+        session.done = true;
+      }
+    }
   }).catch((err) => {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[App Live Debug] Server failed to start:", msg);

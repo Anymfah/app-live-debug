@@ -1,5 +1,6 @@
 import * as path from "path";
 import * as vscode from "vscode";
+import { getSession } from "./server";
 
 const NOTIFICATION_MSG = "Prompt copié — Composer ouvert, collage automatique…";
 const COMPOSER_OPEN_DELAY_MS = 800;
@@ -157,31 +158,64 @@ function getOutputChannel(): vscode.OutputChannel {
 
 /**
  * Handle incoming prompt: either run Cursor CLI agent headless or copy to clipboard + open Composer.
+ * When sessionId is provided (streaming mode), agent stdout/stderr and end/error are pushed to the session for SSE.
  */
-export async function handleIncomingPrompt(text: string): Promise<void> {
+export async function handleIncomingPrompt(text: string, sessionId?: string): Promise<void> {
   const config = vscode.workspace.getConfiguration("appLiveDebug");
   const useHeadless = config.get<boolean>("useHeadlessAgent") ?? true;
   const allowFileChanges = config.get<boolean>("agentAllowFileChanges") ?? true;
+  const session = sessionId ? getSession(sessionId) : undefined;
 
   if (useHeadless) {
     const { runHeadlessAgent, getWorkspaceRoot } = await import("./agent");
     const cwd = getWorkspaceRoot();
     if (!cwd) {
-      vscode.window.showWarningMessage("App Live Debug: No workspace folder open. Open a project folder first.");
+      const msg = "App Live Debug: No workspace folder open. Open a project folder first.";
+      if (session) {
+        session.push("error", msg);
+        session.push("end", "");
+        session.done = true;
+      } else {
+        vscode.window.showWarningMessage(msg);
+      }
       return;
     }
     const model = config.get<string>("agentModel") ?? "auto";
-    vscode.window.showInformationMessage("App Live Debug: Agent headless en cours d'exécution…");
-    const result = await runHeadlessAgent({ prompt: text, cwd, allowFileChanges, model: model || undefined });
-    if (result.success) {
-      vscode.window.showInformationMessage("App Live Debug: Agent headless terminé. Voir Output > App Live Debug (Agent).");
-    } else if (result.error) {
-      vscode.window.showErrorMessage(`App Live Debug: ${result.error}`);
+    if (!session) {
+      vscode.window.showInformationMessage("App Live Debug: Agent headless en cours d'exécution…");
     }
-    getOutputChannel().show(true);
+    const result = await runHeadlessAgent({
+      prompt: text,
+      cwd,
+      allowFileChanges,
+      model: model || undefined,
+      onOutput: session
+        ? (data: string, stream: "stdout" | "stderr") => session.push(stream, data)
+        : undefined,
+    });
+    if (session) {
+      if (result.error) {
+        session.push("error", result.error);
+      }
+      session.push("end", result.success ? "0" : "1");
+      session.done = true;
+    } else {
+      if (result.success) {
+        vscode.window.showInformationMessage("App Live Debug: Agent headless terminé. Voir Output > App Live Debug (Agent).");
+      } else if (result.error) {
+        vscode.window.showErrorMessage(`App Live Debug: ${result.error}`);
+      }
+      getOutputChannel().show(true);
+    }
     return;
   }
 
+  if (session) {
+    session.push("error", "Streaming requires headless agent. Enable appLiveDebug.useHeadlessAgent.");
+    session.push("end", "");
+    session.done = true;
+    return;
+  }
   await copyToClipboardAndNotify(text);
 }
 

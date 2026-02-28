@@ -11,6 +11,8 @@ export interface RunAgentOptions {
   allowFileChanges: boolean;
   /** Model to use (e.g. "auto", "gpt-5.2", "sonnet-4.5-thinking"). Empty string = do not pass --model. */
   model?: string;
+  /** Optional callback for streaming stdout/stderr (e.g. for SSE). */
+  onOutput?: (data: string, stream: "stdout" | "stderr") => void;
 }
 
 function getOutputChannel(): vscode.OutputChannel {
@@ -23,7 +25,7 @@ function getOutputChannel(): vscode.OutputChannel {
  * Requires: Cursor CLI installed (irm 'https://cursor.com/install?win32=true' | iex) and CURSOR_API_KEY set for scripts.
  */
 export function runHeadlessAgent(options: RunAgentOptions): Promise<{ success: boolean; error?: string }> {
-  const { prompt, cwd, allowFileChanges, model } = options;
+  const { prompt, cwd, allowFileChanges, model, onOutput } = options;
   const channel = getOutputChannel();
   channel.clear();
   channel.appendLine(`[App Live Debug] Running Cursor agent (headless) in ${cwd}`);
@@ -49,8 +51,16 @@ export function runHeadlessAgent(options: RunAgentOptions): Promise<{ success: b
       stdio: ["ignore", "pipe", "pipe"],
     });
 
-    proc.stdout?.on("data", (data: Buffer) => channel.append(data.toString()));
-    proc.stderr?.on("data", (data: Buffer) => channel.append(data.toString()));
+    proc.stdout?.on("data", (data: Buffer) => {
+      const text = data.toString();
+      channel.append(text);
+      onOutput?.(text, "stdout");
+    });
+    proc.stderr?.on("data", (data: Buffer) => {
+      const text = data.toString();
+      channel.append(text);
+      onOutput?.(text, "stderr");
+    });
 
     proc.on("error", (err: NodeJS.ErrnoException) => {
       const msg =

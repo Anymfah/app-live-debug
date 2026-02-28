@@ -10,7 +10,7 @@ When working on the **App Live Debug** extension or on **Helios ↔ Cursor** int
 
 1. **Read [README.md](../../README.md)** at the project root for:
    - Installation (F5, VSIX), configuration (`appLiveDebug.serverPort`, `useHeadlessAgent`, `agentModel`, etc.)
-   - Local API: `POST /prompt` payload (`text`, or `description` + `context` with `url`, `domPath`, `consoleLogs`, `screenshotBase64`)
+   - Local API: `POST /prompt` payload (`text`, or `description` + `context` with `url`, `domPath`, `consoleLogs`, `screenshotBase64`). Streaming: send `X-Request-Streaming: true` to get `201` + `sessionId`, then `GET /prompt/stream?sessionId=...` for SSE output.
    - Support for array payload (first ticket used) and screenshot: image written to `.cursor/app-live-debug-screenshot.png`, path added to prompt so the CLI agent can read it
    - Commands: "Copy pending prompt", "Pick a ticket for Composer"
    - Headless agent: Cursor CLI (`agent -p`), requires CLI installed and `CURSOR_API_KEY` set

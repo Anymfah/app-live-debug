@@ -2,7 +2,7 @@
   "name": "app-live-debug",
   "displayName": "App Live Debug",
   "description": "Bridge between Helios app and Cursor for live debugging: receive prompts via local API, copy to clipboard, and work with .cursor/tickets.json",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "engines": {
     "vscode": "^1.85.0"
   },
