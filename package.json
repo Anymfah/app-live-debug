@@ -3,7 +3,7 @@
   "displayName": "App Live Debug",
   "publisher": "anymfah",
   "description": "Bridge between Helios app and Cursor for live debugging: receive prompts via local API, copy to clipboard, and work with .cursor/tickets.json",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -72,6 +72,21 @@
             "Do not pass a trust flag; the agent may show \"Workspace Trust Required\" and block in headless mode."
           ],
           "description": "How the Cursor CLI agent should handle workspace trust. Required for non-interactive runs; choose \"Trust workspace\" to avoid the \"Workspace Trust Required\" prompt."
+        },
+        "appLiveDebug.agentOutputFormat": {
+          "type": "string",
+          "default": "text",
+          "enum": ["text", "stream-json"],
+          "enumDescriptions": [
+            "Plain text only (default). Simple and human-readable in Output.",
+            "NDJSON stream: assistant messages, tool calls, result. Use with streaming (X-Request-Streaming) for faster perceived response; parse events in your client."
+          ],
+          "description": "Agent output format. Use stream-json for real-time events and faster-feeling streaming in Helios."
+        },
+        "appLiveDebug.agentStreamPartialOutput": {
+          "type": "boolean",
+          "default": true,
+          "description": "When output format is stream-json, stream text as it is generated (--stream-partial-output). Makes the response feel faster; only applies when agent output format is stream-json."
         }
       }
     }

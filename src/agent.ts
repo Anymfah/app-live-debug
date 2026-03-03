@@ -23,6 +23,10 @@ export interface RunAgentOptions {
   workspaceTrust?: string;
   /** When set, pass --resume <contextId> to continue that chat (enables multiple chat windows; each window sends its own contextId). */
   contextId?: string;
+  /** Output format: "text" (default) or "stream-json" (NDJSON events for richer/faster streaming). */
+  outputFormat?: "text" | "stream-json";
+  /** When true and outputFormat is stream-json, pass --stream-partial-output for character-level streaming (feels faster). */
+  streamPartialOutput?: boolean;
   /** Optional callback for streaming stdout/stderr (e.g. for SSE). */
   onOutput?: (data: string, stream: "stdout" | "stderr") => void;
 }
@@ -37,7 +41,7 @@ function getOutputChannel(): vscode.OutputChannel {
  * Requires: Cursor CLI installed (irm 'https://cursor.com/install?win32=true' | iex) and CURSOR_API_KEY set for scripts.
  */
 export function runHeadlessAgent(options: RunAgentOptions): Promise<{ success: boolean; error?: string }> {
-  const { prompt, cwd, allowFileChanges, model, cursorApiKey, agentPath, workspaceTrust, contextId: resumeContextId, onOutput } = options;
+  const { prompt, cwd, allowFileChanges, model, cursorApiKey, agentPath, workspaceTrust, contextId: resumeContextId, outputFormat, streamPartialOutput, onOutput } = options;
   const channel = getOutputChannel();
   channel.clear();
   const executable = (agentPath && agentPath.trim()) || AGENT_CMD;
@@ -59,6 +63,7 @@ export function runHeadlessAgent(options: RunAgentOptions): Promise<{ success: b
     channel.appendLine("Warning: CURSOR_API_KEY not set (neither in settings nor in env)");
   }
   if (model) channel.appendLine(`Model: ${model}`);
+  if (outputFormat === "stream-json") channel.appendLine(`Output: stream-json${streamPartialOutput ? " + stream-partial-output" : ""}`);
   channel.appendLine(`Prompt: ${prompt.slice(0, 200)}${prompt.length > 200 ? "…" : ""}`);
   channel.appendLine("");
 
@@ -100,6 +105,10 @@ export function runHeadlessAgent(options: RunAgentOptions): Promise<{ success: b
   else if (trustFlag === "yolo") agentArgs.push("--yolo");
   if (resumeContextId) agentArgs.push("--resume", resumeContextId);
   agentArgs.push("-p", promptToPass);
+  if (outputFormat === "stream-json") {
+    agentArgs.push("--output-format", "stream-json");
+    if (streamPartialOutput) agentArgs.push("--stream-partial-output");
+  }
   if (model && model.trim()) agentArgs.push("--model", model.trim());
   if (allowFileChanges) agentArgs.push("--force");
 

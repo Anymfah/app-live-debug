@@ -187,6 +187,8 @@ export async function handleIncomingPrompt(text: string, sessionId?: string, con
     const cursorApiKey = config.get<string>("cursorApiKey") ?? "";
     const agentPath = config.get<string>("agentPath") ?? "";
     const workspaceTrust = config.get<string>("agentWorkspaceTrust") ?? "Trust workspace (recommended)";
+    const outputFormat = (config.get<string>("agentOutputFormat") ?? "text") as "text" | "stream-json";
+    const streamPartialOutput = config.get<boolean>("agentStreamPartialOutput") ?? true;
     if (!session) {
       vscode.window.showInformationMessage("App Live Debug: Agent headless en cours d'exécution…");
     }
@@ -199,6 +201,8 @@ export async function handleIncomingPrompt(text: string, sessionId?: string, con
       agentPath: agentPath.trim() || undefined,
       workspaceTrust,
       contextId: contextId?.trim() || undefined,
+      outputFormat: outputFormat === "stream-json" ? "stream-json" : undefined,
+      streamPartialOutput: outputFormat === "stream-json" ? streamPartialOutput : undefined,
       onOutput: session
         ? (data: string, stream: "stdout" | "stderr") => session.push(stream, data)
         : undefined,
